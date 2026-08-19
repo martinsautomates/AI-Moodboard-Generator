@@ -1,0 +1,277 @@
+{
+  "name": "moodboard image generator Agent",
+  "nodes": [
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        112,
+        0
+      ],
+      "id": "f51b1ec5-c5df-47d1-887c-76adb7cb8319",
+      "name": "When chat message received",
+      "webhookId": "GENERATE_NEW_WEBHOOK_ID"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        416,
+        224
+      ],
+      "id": "64570251-ad7b-415d-bacb-a1a6e75aeb47",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": null,
+          "name": "",
+          "__aiGatewayManaged": true
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {
+          "systemMessage": "Role: You are an expert image generation prompt engineer. \n\nTask: Your role is to take a simple input idea (e.g., \u201cbohemian rugs, neutral tones\u201d) and transform it into one detailed, polished prompt for creating a high-quality moodboard. \n\nWhen creating the prompt, follow these guidelines: - Highlight the style, colors, and textures implied in the trend. \n\n- Include close-up material textures, styled interior spaces, and decor elements that complement the rug\u2019s look. \n\n- Arrange visuals as a clean, inspiration-ready collection that a design team could immediately use for trend insights. \n\n- Ensure the final output is ready-to-use, simple, and efficient for an image generator.\n\nCritical Rules\nOutput only the final prompt.\nDo not include explanations, introductions, titles, labels, bullet points, quotation marks, markdown formatting, or additional commentary.\nDo not mention that you are generating a prompt.\nReturn exactly one polished prompt and nothing else."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        336,
+        0
+      ],
+      "id": "76d0ef33-eb5f-4cce-bdf8-0634bf7f5842",
+      "name": "Generate prompt"
+    },
+    {
+      "parameters": {
+        "jsCode": "let inputPrompt = $input.first().json.output;\n\n// 1. Remove line breaks\nlet cleanPrompt = inputPrompt.split(/\\r?\\n/).join(\" \");\n\n// 2. Remove Markdown (** and * bullets)\ncleanPrompt = cleanPrompt.replace(/\\*\\*/g, \"\").replace(/\\*/g, \"\");\n\n// 3. Replace double quotes with single quotes\ncleanPrompt = cleanPrompt.replace(/\"/g, \"'\");\n\n// 4. Build n8n-compatible return\nreturn [\n  {\n    json: {\n      prompt: cleanPrompt\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        688,
+        0
+      ],
+      "id": "e5ac5965-e005-46b7-bfbc-20c076743e4b",
+      "name": "Clean prompt"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://router.huggingface.co/nscale/v1/images/generations",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer YOUR_HUGGINGFACE_API_TOKEN"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Accept",
+              "value": " image/png"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"black-forest-labs/FLUX.1-schnell\",\n  \"prompt\": \"{{ $json.prompt }}\",\n  \"response_format\": \"b64_json\"\n}",
+        "options": {
+          "response": {
+            "response": {}
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        912,
+        0
+      ],
+      "id": "20cddc5d-d94f-4ecf-b5f7-d483b7e14d0f",
+      "name": "Hugging Face Image Generator"
+    },
+    {
+      "parameters": {
+        "operation": "toBinary",
+        "sourceProperty": "data[0].b64_json",
+        "binaryPropertyName": "moodboard.png",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1.1,
+      "position": [
+        1136,
+        0
+      ],
+      "id": "838c1df9-bc00-4a05-87b6-075160c85ff5",
+      "name": "Convert to File"
+    },
+    {
+      "parameters": {
+        "content": "STEP 1: USER INPUT\n(Provide simple home decor Idea)",
+        "height": 368,
+        "width": 272,
+        "color": 2
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        16,
+        -208
+      ],
+      "typeVersion": 1,
+      "id": "f1bdccb7-fb5c-45a8-8242-6d8efec22d26",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "STEP 2: PROMPT GENERATION \n(AI transforms user idea to a well detailed prompt to create a high quality moodboard)",
+        "height": 608,
+        "width": 320
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        288,
+        -240
+      ],
+      "typeVersion": 1,
+      "id": "348f3ec0-7df1-4fc2-bf54-9f6ba3a4be37",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "STEP 3: CLEAN AGENT'S OUTPUT\n(Removes line breaks, markdown formatting, Returns a neat JSON object)",
+        "height": 384,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        608,
+        -224
+      ],
+      "typeVersion": 1,
+      "id": "b42f13d8-eed8-4459-8296-feeb1b243960",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "content": "STEP 4: GENERATE IMAGE \n(Make HTTP Request and send prompt to hugging face to generate image)",
+        "height": 608,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        848,
+        -240
+      ],
+      "typeVersion": 1,
+      "id": "7d145230-f13f-4e83-a1cd-015615234c63",
+      "name": "Sticky Note3"
+    },
+    {
+      "parameters": {
+        "content": "STEP 5: CONVERT TO IMAGE\n(Coverts previous node output which is base64 string into an actual viewable image",
+        "height": 384,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        1088,
+        -224
+      ],
+      "typeVersion": 1,
+      "id": "3d1a42fa-ba0d-4e4b-8cfa-69b741c5564b",
+      "name": "Sticky Note4"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When chat message received": {
+      "main": [
+        [
+          {
+            "node": "Generate prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Generate prompt",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate prompt": {
+      "main": [
+        [
+          {
+            "node": "Clean prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clean prompt": {
+      "main": [
+        [
+          {
+            "node": "Hugging Face Image Generator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Hugging Face Image Generator": {
+      "main": [
+        [
+          {
+            "node": "Convert to File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "YOUR_VERSION_ID",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "YOUR_N8N_INSTANCE_ID"
+  },
+  "nodeGroups": [],
+  "id": "YOUR_WORKFLOW_ID",
+  "tags": [
+    {
+      "updatedAt": "2026-07-16T11:36:59.370Z",
+      "createdAt": "2026-07-16T11:36:59.370Z",
+      "id": "YOUR_TAG_ID",
+      "name": "client-project"
+    }
+  ]
+}
